@@ -26,7 +26,6 @@ func ParseMatrix(fileContent string) ([][]uint32, error) {
 		matrix = append(matrix, row)
 	}
 
-
 	if len(matrix) == 0 {
 		return nil, errors.New("empty matrix")
 	}
