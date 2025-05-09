@@ -43,7 +43,7 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 	var distances = MatrixToDict(matrix)
 	var tree = Graph{
 		Nodes: map[int]struct{}{},
-		Edges: [][]Edge{},
+		Edges: [][]*Edge{},
 	}
 
 	for len(joinable) > 2 {
