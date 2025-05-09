@@ -8,7 +8,6 @@ import (
 )
 
 func TestRootCommand(t *testing.T) {
-	// Create a command to test
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Test command",
