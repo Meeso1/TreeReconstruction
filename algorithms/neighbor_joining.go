@@ -20,7 +20,7 @@ func MakeRValues(distances map[int]map[int]float64, joinable map[int]struct{}) m
 	var r = make(map[int]float64)
 	for i := range joinable {
 		var sum = 0.0
-		for j := range distances {
+		for j := range joinable {
 			sum += distances[i][j]
 		}
 		r[i] = sum
@@ -43,7 +43,7 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 	var distances = MatrixToDict(matrix)
 	var tree = Graph{
 		Nodes: map[int]struct{}{},
-		Edges: [][]*Edge{},
+		Edges: map[int][]*Edge{},
 	}
 
 	for len(joinable) > 2 {
@@ -53,7 +53,7 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 		var minI, minJ = -1, -1
 		for i := range joinable {
 			for j := range joinable {
-				if i == j {
+				if i >= j {
 					continue
 				}
 				
@@ -72,26 +72,46 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 		var distanceToI = (distances[minI][minJ] + (r[minI] - r[minJ]) / float64(len(joinable) - 2)) / 2
 		var distanceToJ = distances[minI][minJ] - distanceToI
 
+		//fmt.Printf("Adding nodes: u=%d, i=%d, j=%d\n", u, minI, minJ)
+		//fmt.Printf("Distance to I: %f, Distance to J: %f\n", distanceToI, distanceToJ)
+
 		tree.AddNode(u)
-		tree.AddEdge(minI, u, distanceToI)
-		tree.AddEdge(minJ, u, distanceToJ)
+		tree.AddNode(minI)
+		tree.AddNode(minJ)
+		err := tree.AddEdge(minI, u, distanceToI)
+		if err != nil {
+			return nil, err
+		}
+		err = tree.AddEdge(minJ, u, distanceToJ)
+		if err != nil {
+			return nil, err
+		}
 
 		delete(joinable, minI)
 		delete(joinable, minJ)
 		joinable[u] = struct{}{}
 		
+		distances[u] = map[int]float64{}
 		for k := range joinable {
 			if k == u {
+				distances[u][u] = 0
 				continue
 			}
-			
-			distances[u] = map[int]float64{}
+
 			distances[u][k] = (distances[minI][k] + distances[minJ][k] - distances[minI][minJ]) / 2
 			distances[k][u] = distances[u][k]
 		}
 		
 		delete(distances, minI)
 		delete(distances, minJ)
+
+		for _, v := range distances {
+			delete(v, minI)
+			delete(v, minJ)
+		}
+
+		//fmt.Printf("Joinable: %v\n", joinable)
+		//fmt.Printf("Distances: %v\n", distances)
 	}
 
 	var remaining []int
@@ -99,7 +119,12 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 		remaining = append(remaining, k)
 	}
 
-	tree.AddEdge(remaining[0], remaining[1], distances[remaining[0]][remaining[1]])
+	tree.AddNode(remaining[0])
+	tree.AddNode(remaining[1])
+	err := tree.AddEdge(remaining[0], remaining[1], distances[remaining[0]][remaining[1]])
+	if err != nil {
+		return nil, err
+	}
 
 	return &tree, nil
 }

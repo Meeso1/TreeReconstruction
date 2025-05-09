@@ -5,7 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"treereconstruction/io"
+	"treereconstruction/algorithms"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -38,6 +40,41 @@ var reconstructCmd = &cobra.Command{
 			return
 		}
 		
-		fmt.Printf("Matrix: %v\n", matrix)
+		epsilon := 1e-10
+		tree, err := algorithms.ReconstructIntTree(matrix, epsilon)
+		if err != nil {
+			fmt.Printf("Error reconstructing tree: %v\n", err)
+			return
+		}
+
+		if !tree.IsIntegerWeighted(epsilon) {
+			fmt.Printf("Tree is not integer weighted\n")
+			return
+		}
+
+		serialized, err := io.SerializeGraph(tree)
+		if err != nil {
+			fmt.Printf("Error serializing tree: %v\n", err)
+			return
+		}
+		
+		if outputFile != "" {
+			if _, err := os.Stat(outputFile); err == nil {
+				os.Remove(outputFile)
+			}
+
+			if err := os.MkdirAll(filepath.Dir(outputFile), 0755); err != nil {
+				fmt.Printf("Error creating output directory: %v\n", err)
+				return
+			}
+
+			err = os.WriteFile(outputFile, []byte(serialized), 0644)
+			if err != nil {
+				fmt.Printf("Error writing output file: %v\n", err)
+				return
+			}
+		}
+
+		fmt.Printf("Tree: %v\n", serialized)
 	},
 } 

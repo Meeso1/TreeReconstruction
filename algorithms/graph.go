@@ -1,10 +1,13 @@
 package algorithms
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 type Graph struct {
 	Nodes map[int]struct{}
-	Edges [][]*Edge
+	Edges map[int][]*Edge
 	AllEdges []Edge
 }
 
@@ -14,9 +17,14 @@ type Edge struct {
 	Weight float64
 }
 
-func (g *Graph) AddNode(node int) {
+func (g *Graph) AddNode(node int) bool {
+	if _, ok := g.Nodes[node]; ok {
+		return false
+	}
+
 	g.Nodes[node] = struct{}{}
-	g.Edges = append(g.Edges, make([]*Edge, 0))
+	g.Edges[node] = make([]*Edge, 0)
+	return true
 }
 
 func (g *Graph) AddEdge(node1 int, node2 int, weight float64) error {
@@ -30,7 +38,7 @@ func (g *Graph) AddEdge(node1 int, node2 int, weight float64) error {
 		return fmt.Errorf("node %d cannot be connected to itself", node1)
 	}
 	if weight < 0 {
-		return fmt.Errorf("weight must be non-negative")
+		return fmt.Errorf("weight must be non-negative (got %f for edge %d-%d)", weight, node1, node2)
 	}
 	for _, edge := range g.Edges[node1] {
 		if edge.Node2 == node2 {
@@ -104,12 +112,30 @@ func (g *Graph) MergeZeroEdges(epsilon float64) error {
 		}
 	}
 
+	var merged = make(map[int]int)
 	for _, edge := range zeroEdges {
-		err := g.MergeNodes(edge.Node1, edge.Node2)
+		merged[edge.Node1] = edge.Node1
+		merged[edge.Node2] = edge.Node2
+	}
+
+	for _, edge := range zeroEdges {
+		err := g.MergeNodes(merged[edge.Node1], merged[edge.Node2])
 		if err != nil {
 			return err
 		}
+
+		merged[edge.Node2] = merged[edge.Node1]
 	}
 
 	return nil
+}
+
+func (g *Graph) IsIntegerWeighted(epsilon float64) bool {
+	for _, edge := range g.AllEdges {
+		if math.Abs(edge.Weight - math.Round(edge.Weight)) > epsilon {
+			return false
+		}
+	}
+
+	return true
 }

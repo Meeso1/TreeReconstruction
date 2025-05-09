@@ -1,6 +1,6 @@
 package algorithms
 
-func CastMatrixToFloat(matrix [][]int32) [][]float64 {
+func CastMatrixToFloat(matrix [][]uint32) [][]float64 {
 	var floatMatrix = make([][]float64, len(matrix))
 	for i := range matrix {
 		floatMatrix[i] = make([]float64, len(matrix[i]))
@@ -12,7 +12,7 @@ func CastMatrixToFloat(matrix [][]int32) [][]float64 {
 	return floatMatrix
 }
 
-func ReconstructIntTree(matrix [][]int32, epsilon float64) (*Graph, error) {
+func ReconstructIntTree(matrix [][]uint32, epsilon float64) (*Graph, error) {
 	var floatMatrix = CastMatrixToFloat(matrix)
 	var tree, err = NeighborJoining(floatMatrix)
 	if err != nil {
