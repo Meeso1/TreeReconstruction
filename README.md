@@ -1,35 +1,32 @@
 # Tree Reconstruction CLI
 
-A minimal CLI application template written in Go.
+A CLI application for tree reconstruction written in Go.
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/treereconstruction.git
+git clone https://github.com/Meeso1/treereconstruction.git
 cd treereconstruction
 
 # Build the application
-go build -o bin/treereconstruction
+make build
 
 # Run the application
-./bin/treereconstruction
+./bin/tree-reconstruction
 ```
 
 ## Usage
 
 ```bash
 # Show help
-./bin/treereconstruction --help
-
-# Enable verbose mode
-./bin/treereconstruction -v
-
-# Use a custom config file
-./bin/treereconstruction -c config.yaml
+./bin/tree-reconstruction help
 
 # Check version
-./bin/treereconstruction version
+./bin/tree-reconstruction version
+
+# Reconstruct a tree from distance matrix in input_file.txt
+./bin/tree-reconstruction reconstruct -i input_file.txt
 ```
 
 ## Development
@@ -39,7 +36,7 @@ go build -o bin/treereconstruction
 go mod download
 
 # Run tests
-go test ./...
+make test
 ```
 
 ## Building with Version Information
