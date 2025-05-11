@@ -3,6 +3,7 @@ package algorithms
 import (
 	"fmt"
 	"math"
+	"sort"
 )
 
 func MatrixToDict(matrix [][]float64) map[int]map[int]float64 {
@@ -29,6 +30,35 @@ func MakeRValues(distances map[int]map[int]float64, joinable map[int]struct{}) m
 	return r
 }
 
+func PrintTree(tree *Graph) {
+	var nodesList = []int{}
+	for k := range tree.Nodes {
+		nodesList = append(nodesList, k)
+	}
+	sort.Ints(nodesList)
+
+	fmt.Printf("%d nodes: %v\n", len(nodesList), nodesList)
+	for _, node := range nodesList {
+		var edgesList = []string{}
+		for _, edge := range tree.Edges[node] {
+			edgesList = append(edgesList, fmt.Sprintf("%d-%d: %f", edge.Node1, edge.Node2, edge.Weight))
+		}
+		fmt.Printf("Node %d edges:\n", node)
+		for _, edge := range edgesList {
+			fmt.Printf("  %s\n", edge)
+		}
+	}
+}
+
+func PrintJoinable(joinable map[int]struct{}) {
+	var joinableList = []int{}
+	for k := range joinable {
+		joinableList = append(joinableList, k)
+	}
+	sort.Ints(joinableList)
+	fmt.Printf("Joinable: %v\n", joinableList)
+}
+
 func NeighborJoining(matrix [][]float64) (*Graph, error) {
 	for len(matrix) < 2 {
 		return nil, fmt.Errorf("matrix must have at least 2 rows")
@@ -43,7 +73,7 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 	var distances = MatrixToDict(matrix)
 	var tree = Graph{
 		Nodes: map[int]struct{}{},
-		Edges: map[int][]*Edge{},
+		Edges: map[int][]Edge{},
 	}
 
 	for len(joinable) > 2 {
@@ -71,9 +101,6 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 
 		var distanceToI = (distances[minI][minJ] + (r[minI] - r[minJ]) / float64(len(joinable) - 2)) / 2
 		var distanceToJ = distances[minI][minJ] - distanceToI
-
-		//fmt.Printf("Adding nodes: u=%d, i=%d, j=%d\n", u, minI, minJ)
-		//fmt.Printf("Distance to I: %f, Distance to J: %f\n", distanceToI, distanceToJ)
 
 		tree.AddNode(u)
 		tree.AddNode(minI)
@@ -110,8 +137,7 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 			delete(v, minJ)
 		}
 
-		//fmt.Printf("Joinable: %v\n", joinable)
-		//fmt.Printf("Distances: %v\n", distances)
+		// PrintJoinable(joinable)
 	}
 
 	var remaining []int
@@ -123,6 +149,11 @@ func NeighborJoining(matrix [][]float64) (*Graph, error) {
 	tree.AddNode(remaining[1])
 	err := tree.AddEdge(remaining[0], remaining[1], distances[remaining[0]][remaining[1]])
 	if err != nil {
+		return nil, err
+	}
+
+	// PrintTree(&tree)
+	if err := tree.ValidateTree(); err != nil {
 		return nil, err
 	}
 

@@ -13,11 +13,13 @@ import (
 var (
 	inputFile  string
 	outputFile string
+	useShortenedSyntax bool
 )
 
 func init() {
 	reconstructCmd.Flags().StringVarP(&inputFile, "input", "i", "", "Input file path (required)")
 	reconstructCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path")
+	reconstructCmd.Flags().BoolVarP(&useShortenedSyntax, "short", "s", true, "Use shortened syntax")
 	reconstructCmd.MarkFlagRequired("input")
 	
 	rootCmd.AddCommand(reconstructCmd)
@@ -52,7 +54,7 @@ var reconstructCmd = &cobra.Command{
 			return
 		}
 
-		serialized, err := io.SerializeGraph(tree)
+		serialized, err := io.SerializeGraph(tree, useShortenedSyntax)
 		if err != nil {
 			fmt.Printf("Error serializing tree: %v\n", err)
 			return

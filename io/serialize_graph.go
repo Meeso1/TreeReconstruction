@@ -8,7 +8,7 @@ import (
 )
 
 func MakePrefixSuffix(incomingEdgeLength int, useShortenedSyntax bool) (string, string) {
-	if useShortenedSyntax || incomingEdgeLength == 1 {
+	if !useShortenedSyntax || incomingEdgeLength == 1 {
 		return strings.Repeat("(", incomingEdgeLength), strings.Repeat(")", incomingEdgeLength)
 	}
 	return "[" + strconv.Itoa(incomingEdgeLength) + "](", ")"
@@ -33,6 +33,10 @@ func SerializeChildren(
 			otherNode = edge.Node2
 		}
 
+		if _, ok := (*alreadySerialized)[otherNode]; ok {
+			continue
+		}
+
 		var inside, err = SerializeChildren(graph, otherNode, alreadySerialized, int(math.Round(edge.Weight)), useShortenedSyntax)
 		if err != nil {
 			return "", err
@@ -43,8 +47,8 @@ func SerializeChildren(
 	return result + suffix, nil
 }
 
-func SerializeGraph(graph *algorithms.Graph) (string, error) {
-	var result, err = SerializeChildren(graph, 0, &map[int]struct{}{}, 1, false)
+func SerializeGraph(graph *algorithms.Graph, useShortenedSyntax bool) (string, error) {
+	var result, err = SerializeChildren(graph, 0, &map[int]struct{}{}, 1, useShortenedSyntax)
 	if err != nil {
 		return "", err
 	}

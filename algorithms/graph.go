@@ -7,7 +7,7 @@ import (
 
 type Graph struct {
 	Nodes map[int]struct{}
-	Edges map[int][]*Edge
+	Edges map[int][]Edge
 	AllEdges []Edge
 }
 
@@ -17,17 +17,43 @@ type Edge struct {
 	Weight float64
 }
 
+func (e *Edge) SameAs(other *Edge) bool {
+	return (e.Node1 == other.Node1 && e.Node2 == other.Node2) || (e.Node1 == other.Node2 && e.Node2 == other.Node1)
+}
+
+func IndexOfEdge[T Edge | *Edge](edges []T, start int, end int) int {
+	for i, e := range edges {
+		var edge *Edge
+		switch v := any(e).(type) {
+		case Edge:
+			edge = &v
+		case *Edge:
+			edge = v
+		}
+
+		if edge.SameAs(&Edge{start, end, 0}) {
+			return i
+		}
+	}
+
+	return -1
+}
+
 func (g *Graph) AddNode(node int) bool {
 	if _, ok := g.Nodes[node]; ok {
 		return false
 	}
 
 	g.Nodes[node] = struct{}{}
-	g.Edges[node] = make([]*Edge, 0)
+	g.Edges[node] = make([]Edge, 0)
 	return true
 }
 
 func (g *Graph) AddEdge(node1 int, node2 int, weight float64) error {
+	if node1 > node2 {
+		node1, node2 = node2, node1
+	}
+
 	if _, ok := g.Nodes[node1]; !ok {
 		return fmt.Errorf("node %d does not exist in the graph", node1)
 	}
@@ -40,43 +66,51 @@ func (g *Graph) AddEdge(node1 int, node2 int, weight float64) error {
 	if weight < 0 {
 		return fmt.Errorf("weight must be non-negative (got %f for edge %d-%d)", weight, node1, node2)
 	}
-	for _, edge := range g.Edges[node1] {
-		if edge.Node2 == node2 {
-			return fmt.Errorf("edge %d-%d already exists", node1, node2)
-		}
+	if index := IndexOfEdge(g.AllEdges, node1, node2); index != -1 {
+		return fmt.Errorf("edge %d-%d already exists", node1, node2)
 	}
 
-	g.AllEdges = append(g.AllEdges, Edge{node1, node2, weight})
-	g.Edges[node1] = append(g.Edges[node1], &g.AllEdges[len(g.AllEdges) - 1])
-	g.Edges[node2] = append(g.Edges[node2], &g.AllEdges[len(g.AllEdges) - 1])
+	var edge = Edge{node1, node2, weight}
+	g.AllEdges = append(g.AllEdges, edge)
+	g.Edges[node1] = append(g.Edges[node1], edge)
+	g.Edges[node2] = append(g.Edges[node2], edge)
 
 	return nil
 }
 
-func (g *Graph) RemoveEdge(node1 int, node2 int) {
-	for i, edge := range g.Edges[node1] {
-		if edge.Node2 == node2 {
-			g.Edges[node1] = append(g.Edges[node1][:i], g.Edges[node1][i+1:]...)
-			break
-		}
+func (g *Graph) RemoveEdge(node1 int, node2 int) (bool, error) {
+	if node1 > node2 {
+		node1, node2 = node2, node1
 	}
 
-	for i, edge := range g.Edges[node2] {
-		if edge.Node1 == node1 {
-			g.Edges[node2] = append(g.Edges[node2][:i], g.Edges[node2][i+1:]...)
-			break
-		}
+	// fmt.Printf("Removing edge %d-%d\n", node1, node2)
+
+	index1 := IndexOfEdge(g.Edges[node1], node1, node2)
+	if index1 != -1 {
+		g.Edges[node1] = append(g.Edges[node1][:index1], g.Edges[node1][index1+1:]...)
+	}
+	
+	index2 := IndexOfEdge(g.Edges[node2], node1, node2)
+	if index2 != -1 {
+		g.Edges[node2] = append(g.Edges[node2][:index2], g.Edges[node2][index2+1:]...)
+	}
+	
+	index3 := IndexOfEdge(g.AllEdges, node1, node2)
+	if index3 != -1 {
+		g.AllEdges = append(g.AllEdges[:index3], g.AllEdges[index3+1:]...)
 	}
 
-	for i, edge := range g.AllEdges {
-		if (edge.Node1 == node1 && edge.Node2 == node2) {
-			g.AllEdges = append(g.AllEdges[:i], g.AllEdges[i+1:]...)
-			break
-		}
-	}
+	if !(index1 != -1 && index2 != -1 && index3 != -1) && !(index1 == -1 && index2 == -1 && index3 == -1) {
+		return false, fmt.Errorf("edge %d-%d found in only some lists: (from %d: %v, from %d: %v, from all: %v)", 
+			node1, node2, node1, index1 != -1, node2, index2 != -1, index3 != -1)
+	} 
+
+	return index1 != -1 || index2 != -1 || index3 != -1, nil
 }
 
 func (g *Graph) MergeNodes(node1 int, node2 int) error {
+	// fmt.Printf("Merging nodes %d and %d\n", node1, node2)
+
 	if _, ok := g.Nodes[node1]; !ok {
 		return fmt.Errorf("node %d does not exist in the graph", node1)
 	}
@@ -84,22 +118,31 @@ func (g *Graph) MergeNodes(node1 int, node2 int) error {
 		return fmt.Errorf("node %d does not exist in the graph", node2)
 	}
 
-	delete(g.Nodes, node2)
-
-	for _, edge := range g.Edges[node2] {
-		if edge.Node1 == node1 || edge.Node2 == node1 {
-			continue
-		}
-
-		if edge.Node1 == node2 {
-			edge.Node1 = node1
-		}
-		if edge.Node2 == node2 {
-			edge.Node2 = node1
-		}
+	if removed, err := g.RemoveEdge(node1, node2); err != nil {
+		return err
+	} else if !removed {
+		return fmt.Errorf("edge %d-%d not found in the graph: merged nodes must be connected", node1, node2)
 	}
 
-	g.RemoveEdge(node1, node2)
+	var edgesToChange []Edge
+	for _, edge := range g.AllEdges {
+		if edge.Node1 == node2 || edge.Node2 == node2 {
+			edgesToChange = append(edgesToChange, edge)
+		}
+	}
+	
+	for _, edge := range edgesToChange {
+		g.RemoveEdge(edge.Node1, edge.Node2)
+		if edge.Node1 == node2 {
+			g.AddEdge(node1, edge.Node2, edge.Weight)
+		}
+		if edge.Node2 == node2 {
+			g.AddEdge(edge.Node1, node1, edge.Weight)
+		}
+	}
+	
+	delete(g.Nodes, node2)
+	delete(g.Edges, node2)
 
 	return nil
 }
@@ -124,6 +167,12 @@ func (g *Graph) MergeZeroEdges(epsilon float64) error {
 			return err
 		}
 
+		// PrintTree(g)
+		err = g.ValidateTree()
+		if err != nil {
+			return err
+		}
+
 		merged[edge.Node2] = merged[edge.Node1]
 	}
 
@@ -138,4 +187,23 @@ func (g *Graph) IsIntegerWeighted(epsilon float64) bool {
 	}
 
 	return true
+}
+
+func (g *Graph) ValidateTree() error {
+	for _, edge := range g.AllEdges {
+		if edge.Weight < 0 {
+			return fmt.Errorf("edge %d-%d has negative weight", edge.Node1, edge.Node2)
+		}
+	}
+
+	for _, edge := range g.AllEdges {
+		if index1 := IndexOfEdge(g.Edges[edge.Node1], edge.Node1, edge.Node2); index1 == -1 {
+			return fmt.Errorf("edge %d-%d not found in g.Edges[%d]: %v", edge.Node1, edge.Node2, edge.Node1, g.AllEdges)
+		}
+		if index2 := IndexOfEdge(g.Edges[edge.Node2], edge.Node1, edge.Node2); index2 == -1 {
+			return fmt.Errorf("edge %d-%d not found in g.Edges[%d]: %v", edge.Node1, edge.Node2, edge.Node2, g.AllEdges)
+		}
+	}
+
+	return nil
 }
