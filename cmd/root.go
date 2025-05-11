@@ -8,16 +8,14 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "treereconstruction",
-	Short: "TreeReconstruction CLI tool",
-	Long:  `A minimal CLI application for TreeReconstruction project.`,
+	Use:   "tree-reconstruction",
+	Short: "Tree reconstruction CLI tool",
+	Long:  `CLI application that reconstructs a tree from a distance matrix.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// This is the action that will be executed when the command is called without any subcommands
-		fmt.Println("Welcome to TreeReconstruction CLI!")
+		fmt.Println("Run `tree-reconstruction reconstruct` to reconstruct a tree, or `tree-reconstruction help` for a list of available commands.")
 	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -26,9 +24,4 @@ func Execute() {
 }
 
 func init() {
-	// Here you can define flags and configuration settings
-	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.treereconstruction.yaml)")
-	
-	// Example of a boolean flag
-	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
-} 
+}
