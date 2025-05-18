@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-
 	"github.com/spf13/cobra"
 	"treereconstruction/io"
 	"treereconstruction/algorithms"
@@ -13,13 +12,13 @@ import (
 var (
 	inputFile  string
 	outputFile string
-	useShortenedSyntax bool
+	serializationTypeString string
 )
 
 func init() {
 	reconstructCmd.Flags().StringVarP(&inputFile, "input", "i", "", "Input file path (required)")
 	reconstructCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path")
-	reconstructCmd.Flags().BoolVarP(&useShortenedSyntax, "short", "s", true, "Use shortened syntax")
+	reconstructCmd.Flags().StringVarP(&serializationTypeString, "serialization", "s", "neighbor-lists", "Serialization type (brackets, brackets-shortened, neighbor-lists)")
 	reconstructCmd.MarkFlagRequired("input")
 	
 	rootCmd.AddCommand(reconstructCmd)
@@ -30,6 +29,19 @@ var reconstructCmd = &cobra.Command{
 	Short: "Reconstruct a tree",
 	Long:  `Reconstruct a tree from distance matrix`,
 	Run: func(cmd *cobra.Command, args []string) {
+		var serializationType io.SerializationType
+		switch serializationTypeString {
+		case "brackets":
+			serializationType = io.SerializationTypeBrackets
+		case "brackets-shortened":
+			serializationType = io.SerializationTypeBracketsShortened
+		case "neighbor-lists":
+			serializationType = io.SerializationTypeNeighborLists
+		default:
+			fmt.Printf("Invalid serialization type: %s\n", serializationTypeString)
+			return
+		}
+
 		fileContent, err := os.ReadFile(inputFile)
 		if err != nil {
 			fmt.Printf("Error reading file: %v\n", err)
@@ -54,7 +66,7 @@ var reconstructCmd = &cobra.Command{
 			return
 		}
 
-		serialized, err := io.SerializeGraph(tree, useShortenedSyntax)
+		serialized, err := io.SerializeGraph(tree, serializationType)
 		if err != nil {
 			fmt.Printf("Error serializing tree: %v\n", err)
 			return
@@ -77,6 +89,10 @@ var reconstructCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Printf("Tree: %v\n", serialized)
+		if serializationType == io.SerializationTypeNeighborLists {
+			fmt.Printf("Tree:\n%v\n", serialized)
+		} else {
+			fmt.Printf("Tree: %v\n", serialized)
+		}
 	},
 } 
