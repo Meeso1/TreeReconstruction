@@ -100,6 +100,10 @@ func SerializeGraph(graph *algorithms.Graph, serializationType SerializationType
 	case SerializationTypeBracketsShortened:
 		return SerializeChildrenAsBrackets(graph, 0, &map[int]struct{}{}, 1, true)
 	case SerializationTypeNeighborLists:
+		err := graph.SplitEdges(1e-6)
+		if err != nil {
+			return "", err
+		}
 		return SerializeChildrenAsNeighborLists(graph)
 	default:
 		return "", fmt.Errorf("invalid serialization type: %d", serializationType)

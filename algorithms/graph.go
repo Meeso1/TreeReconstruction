@@ -9,6 +9,7 @@ type Graph struct {
 	Nodes map[int]struct{}
 	Edges map[int][]Edge
 	AllEdges []Edge
+	MaxNode int
 }
 
 type Edge struct {
@@ -46,7 +47,19 @@ func (g *Graph) AddNode(node int) bool {
 
 	g.Nodes[node] = struct{}{}
 	g.Edges[node] = make([]Edge, 0)
+
+	if node > g.MaxNode {
+		g.MaxNode = node
+	}
+
 	return true
+}
+
+func (g *Graph) AddNewNode() int {
+	var node = g.MaxNode + 1
+	g.AddNode(node)
+	g.MaxNode = node
+	return node
 }
 
 func (g *Graph) AddEdge(node1 int, node2 int, weight float64) error {
@@ -174,6 +187,50 @@ func (g *Graph) MergeZeroEdges(epsilon float64) error {
 		}
 
 		merged[edge.Node2] = merged[edge.Node1]
+	}
+
+	return nil
+}
+
+func (g *Graph) SplitEdge(edge Edge, epsilon float64) error {
+	removed, err := g.RemoveEdge(edge.Node1, edge.Node2)
+	if err != nil {
+		return err
+	}
+	if !removed {
+		return fmt.Errorf("edge %d-%d not found in the graph", edge.Node1, edge.Node2)
+	}
+	
+	var roundedWeight = (int)(math.Round(edge.Weight))
+	if math.Abs(edge.Weight - float64(roundedWeight)) > epsilon {
+		return fmt.Errorf("edge %d-%d has non-integer weight (%f)", edge.Node1, edge.Node2, edge.Weight)
+	}
+
+	var previousNode = edge.Node1
+	for i := 0; i < roundedWeight-1; i++ {
+		var newNode = g.AddNewNode()
+		g.AddEdge(previousNode, newNode, 1)
+		previousNode = newNode
+	}
+
+	g.AddEdge(previousNode, edge.Node2, 1)
+
+	return nil
+}
+
+func (g *Graph) SplitEdges(epsilon float64) error {
+	var edgesToSplit []Edge
+	for _, edge := range g.AllEdges {
+		if math.Abs(edge.Weight - 1) > epsilon {
+			edgesToSplit = append(edgesToSplit, edge)
+		}
+	}
+
+	for _, edge := range edgesToSplit {
+		err := g.SplitEdge(edge, epsilon)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
