@@ -60,12 +60,23 @@ var compareCmd = &cobra.Command{
 
 		if algorithms.CompareTreeTopology(tree1, tree2) {
 			fmt.Printf("✓ Trees have the same topology\n")
-			fmt.Printf("  %s: %d nodes, %d edges\n", file1, len(tree1.Nodes), len(tree1.AllEdges))
-			fmt.Printf("  %s: %d nodes, %d edges\n", file2, len(tree2.Nodes), len(tree2.AllEdges))
+			for _, line := range io.GetTreeSummary(tree1) {
+				fmt.Printf("  %s\n", line)
+			}
 		} else {
 			fmt.Printf("✗ Trees have different topologies\n")
-			fmt.Printf("  %s: %d nodes, %d edges\n", file1, len(tree1.Nodes), len(tree1.AllEdges))
-			fmt.Printf("  %s: %d nodes, %d edges\n", file2, len(tree2.Nodes), len(tree2.AllEdges))
+
+			fmt.Printf("  %s:\n", file1)
+			summary1 := io.GetTreeSummary(tree1)
+			for _, line := range summary1 {
+				fmt.Printf("    %s\n", line)
+			}
+
+			fmt.Printf("  %s:\n", file2)
+			summary2 := io.GetTreeSummary(tree2)
+			for _, line := range summary2 {
+				fmt.Printf("    %s\n", line)
+			}
 		}
 	},
 }

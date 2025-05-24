@@ -44,7 +44,7 @@ var generateCmd = &cobra.Command{
 		if seed == 0 {
 			seed = time.Now().UnixNano()
 		}
-		fmt.Printf("Using random seed: %d\n", seed)
+		//fmt.Printf("Using random seed: %d\n", seed)
 
 		inputFile := fmt.Sprintf("%s-%d.input.txt", outputPrefix, numLeaves)
 		if _, err := os.Stat(inputFile); err == nil {
@@ -58,7 +58,7 @@ var generateCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("Generating random tree with %d leaves...\n", numLeaves)
+		//fmt.Printf("Generating random tree with %d leaves...\n", numLeaves)
 		tree, err := algorithms.GenerateRandomTree(numLeaves, seed, chainExtensionProb, connectToExistingProb)
 		if err != nil {
 			fmt.Printf("Error generating tree: %v\n", err)
@@ -77,7 +77,7 @@ var generateCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("Calculating distance matrix...\n")
+		//fmt.Printf("Calculating distance matrix...\n")
 		distanceMatrix, err := algorithms.CalculateDistanceMatrix(tree)
 		if err != nil {
 			fmt.Printf("Error calculating distance matrix: %v\n", err)
@@ -86,7 +86,7 @@ var generateCmd = &cobra.Command{
 
 		matrixCSV := algorithms.FormatDistanceMatrix(distanceMatrix)
 
-		fmt.Printf("Serializing tree...\n")
+		//fmt.Printf("Serializing tree...\n")
 		serializedTree, err := io.SerializeGraph(tree, io.SerializationTypeNeighborLists)
 		if err != nil {
 			fmt.Printf("Error serializing tree: %v\n", err)
@@ -109,14 +109,14 @@ var generateCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Printf("Writing distance matrix to %s...\n", inputFile)
+		//fmt.Printf("Writing distance matrix to %s...\n", inputFile)
 		err = os.WriteFile(inputFile, []byte(matrixCSV), 0644)
 		if err != nil {
 			fmt.Printf("Error writing input file: %v\n", err)
 			return
 		}
 
-		fmt.Printf("Writing tree to %s...\n", outputFile)
+		//fmt.Printf("Writing tree to %s...\n", outputFile)
 		err = os.WriteFile(outputFile, []byte(serializedTree), 0644)
 		if err != nil {
 			fmt.Printf("Error writing output file: %v\n", err)
@@ -127,5 +127,11 @@ var generateCmd = &cobra.Command{
 		fmt.Printf("  Input file:  %s (%dx%d distance matrix)\n", inputFile, numLeaves, numLeaves)
 		fmt.Printf("  Output file: %s (neighbor lists format)\n", outputFile)
 		fmt.Printf("  Random seed: %d\n", seed)
+
+		fmt.Printf("  Tree summary:\n")
+		treeSummary := io.GetTreeSummary(tree)
+		for _, line := range treeSummary {
+			fmt.Printf("    %s\n", line)
+		}
 	},
 }

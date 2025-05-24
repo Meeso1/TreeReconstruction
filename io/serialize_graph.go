@@ -63,7 +63,7 @@ func SerializeChildrenAsNeighborLists(graph *algorithms.Graph) (string, error) {
 		allNodes = append(allNodes, node)
 	}
 	sort.Ints(allNodes)
-	
+
 	var result = ""
 	for _, node := range allNodes {
 		result += fmt.Sprintf("%d:", node)
@@ -107,5 +107,39 @@ func SerializeGraph(graph *algorithms.Graph, serializationType SerializationType
 		return SerializeChildrenAsNeighborLists(graph)
 	default:
 		return "", fmt.Errorf("invalid serialization type: %d", serializationType)
+	}
+}
+
+// Returns a formatted summary of the tree structure
+func GetTreeSummary(graph *algorithms.Graph) []string {
+	totalNodes := len(graph.Nodes)
+	leafCount := 0
+
+	degreeCount := make(map[int]int)
+	for node := range graph.Nodes {
+		degree := len(graph.Edges[node])
+		degreeCount[degree]++
+		if degree == 1 {
+			leafCount++
+		}
+	}
+
+	var degrees []int
+	for degree := range degreeCount {
+		degrees = append(degrees, degree)
+	}
+	sort.Ints(degrees)
+
+	var degreeStrings []string
+	for _, degree := range degrees {
+		count := degreeCount[degree]
+		degreeStrings = append(degreeStrings, fmt.Sprintf("%dx%d", count, degree))
+	}
+	degreeDistribution := strings.Join(degreeStrings, ", ")
+
+	return []string{
+		fmt.Sprintf("Nodes: %d total, %d leaves", totalNodes, leafCount),
+		fmt.Sprintf("Edges: %d", len(graph.AllEdges)),
+		fmt.Sprintf("Degrees: %s", degreeDistribution),
 	}
 }
