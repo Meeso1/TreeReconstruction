@@ -9,13 +9,24 @@ import (
 // The function starts with a simple path and randomly adds new leaves until
 // the desired number is reached.
 // chainExtensionProb is the probability of extending a chain by one additional node.
-func GenerateRandomTree(numLeaves int, seed int64, chainExtensionProb float64) (*Graph, error) {
+// connectToExistingProb is the probability of connecting new leaves to existing non-leaf nodes
+// instead of splitting edges.
+func GenerateRandomTree(
+	numLeaves int,
+	seed int64,
+	chainExtensionProb float64,
+	connectToExistingProb float64,
+) (*Graph, error) {
 	if numLeaves < 2 {
 		return nil, fmt.Errorf("number of leaves must be at least 2, got %d", numLeaves)
 	}
 
 	if chainExtensionProb < 0 || chainExtensionProb >= 1 {
 		return nil, fmt.Errorf("chainExtensionProb must be in range [0, 1), got %f", chainExtensionProb)
+	}
+
+	if connectToExistingProb < 0 || connectToExistingProb >= 1 {
+		return nil, fmt.Errorf("connectToExistingProb must be in range [0, 1), got %f", connectToExistingProb)
 	}
 
 	rng := rand.New(rand.NewSource(seed))
@@ -37,7 +48,7 @@ func GenerateRandomTree(numLeaves int, seed int64, chainExtensionProb float64) (
 
 	// Keep adding leaves until we reach the desired number
 	for countLeaves(graph) < numLeaves {
-		err := addRandomLeaf(graph, rng, chainExtensionProb)
+		err := addRandomLeaf(graph, rng, chainExtensionProb, connectToExistingProb)
 		if err != nil {
 			return nil, err
 		}
@@ -58,11 +69,67 @@ func countLeaves(graph *Graph) int {
 }
 
 // Adds a new leaf to a random edge in the tree
-func addRandomLeaf(graph *Graph, rng *rand.Rand, chainExtensionProb float64) error {
+func addRandomLeaf(graph *Graph, rng *rand.Rand, chainExtensionProb float64, connectToExistingProb float64) error {
 	if len(graph.AllEdges) == 0 {
 		return fmt.Errorf("cannot add leaf to empty graph")
 	}
 
+	// Decide whether to connect to existing node or split an edge
+	if rng.Float64() < connectToExistingProb {
+		return addRandomLeafByConnecting(graph, rng, chainExtensionProb)
+	} else {
+		return addRandomLeafBySplitting(graph, rng, chainExtensionProb)
+	}
+}
+
+// Adds a new leaf by connecting it to an existing non-leaf node
+func addRandomLeafByConnecting(graph *Graph, rng *rand.Rand, chainExtensionProb float64) error {
+	// Find all non-leaf nodes (nodes with degree > 1)
+	nonLeafNodes := make([]int, 0)
+	for node := range graph.Nodes {
+		if len(graph.Edges[node]) > 1 {
+			nonLeafNodes = append(nonLeafNodes, node)
+		}
+	}
+
+	if len(nonLeafNodes) == 0 {
+		// If no non-leaf nodes exist, fall back to splitting an edge
+		return addRandomLeafBySplitting(graph, rng, chainExtensionProb)
+	}
+
+	// Select a random non-leaf node
+	selectedNode := nonLeafNodes[rng.Intn(len(nonLeafNodes))]
+
+	// Determine chain length
+	chainLength := determineChainLength(rng, chainExtensionProb)
+
+	// Create chain of nodes
+	chainNodes := make([]int, chainLength)
+	for i := 0; i < chainLength; i++ {
+		chainNodes[i] = graph.AddNewNode()
+	}
+
+	// Connect the chain starting from the selected node
+	err := graph.AddEdge(selectedNode, chainNodes[0], 1.0)
+	if err != nil {
+		return err
+	}
+
+	// Connect the chain nodes
+	for i := 0; i < chainLength-1; i++ {
+		err = graph.AddEdge(chainNodes[i], chainNodes[i+1], 1.0)
+		if err != nil {
+			return err
+		}
+	}
+
+	// The last node in the chain is the leaf (chainNodes[chainLength-1])
+
+	return nil
+}
+
+// Adds a new leaf by splitting a random edge in the tree
+func addRandomLeafBySplitting(graph *Graph, rng *rand.Rand, chainExtensionProb float64) error {
 	// Select a random edge to split
 	randomEdgeIndex := rng.Intn(len(graph.AllEdges))
 	selectedEdge := graph.AllEdges[randomEdgeIndex]
