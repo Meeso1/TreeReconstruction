@@ -8,9 +8,14 @@ import (
 // Creates a random tree with the specified number of leaves.
 // The function starts with a simple path and randomly adds new leaves until
 // the desired number is reached.
-func GenerateRandomTree(numLeaves int, seed int64) (*Graph, error) {
+// chainExtensionProb is the probability of extending a chain by one additional node.
+func GenerateRandomTree(numLeaves int, seed int64, chainExtensionProb float64) (*Graph, error) {
 	if numLeaves < 2 {
 		return nil, fmt.Errorf("number of leaves must be at least 2, got %d", numLeaves)
+	}
+
+	if chainExtensionProb < 0 || chainExtensionProb >= 1 {
+		return nil, fmt.Errorf("chainExtensionProb must be in range [0, 1), got %f", chainExtensionProb)
 	}
 
 	rng := rand.New(rand.NewSource(seed))
@@ -32,7 +37,7 @@ func GenerateRandomTree(numLeaves int, seed int64) (*Graph, error) {
 
 	// Keep adding leaves until we reach the desired number
 	for countLeaves(graph) < numLeaves {
-		err := addRandomLeaf(graph, rng)
+		err := addRandomLeaf(graph, rng, chainExtensionProb)
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +58,7 @@ func countLeaves(graph *Graph) int {
 }
 
 // Adds a new leaf to a random edge in the tree
-func addRandomLeaf(graph *Graph, rng *rand.Rand) error {
+func addRandomLeaf(graph *Graph, rng *rand.Rand, chainExtensionProb float64) error {
 	if len(graph.AllEdges) == 0 {
 		return fmt.Errorf("cannot add leaf to empty graph")
 	}
@@ -71,8 +76,14 @@ func addRandomLeaf(graph *Graph, rng *rand.Rand) error {
 	// Create a new internal node
 	newInternalNode := graph.AddNewNode()
 
-	// Create a new leaf node
-	newLeaf := graph.AddNewNode()
+	// Determine chain length
+	chainLength := determineChainLength(rng, chainExtensionProb)
+
+	// Create chain of nodes
+	chainNodes := make([]int, chainLength)
+	for i := 0; i < chainLength; i++ {
+		chainNodes[i] = graph.AddNewNode()
+	}
 
 	// Connect the original nodes to the new internal node
 	err = graph.AddEdge(selectedEdge.Node1, newInternalNode, 1.0)
@@ -85,13 +96,39 @@ func addRandomLeaf(graph *Graph, rng *rand.Rand) error {
 		return err
 	}
 
-	// Connect the new leaf to the new internal node
-	err = graph.AddEdge(newInternalNode, newLeaf, 1.0)
+	// Connect the chain starting from the new internal node
+	err = graph.AddEdge(newInternalNode, chainNodes[0], 1.0)
 	if err != nil {
 		return err
 	}
 
+	// Connect the chain nodes
+	for i := 0; i < chainLength-1; i++ {
+		err = graph.AddEdge(chainNodes[i], chainNodes[i+1], 1.0)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// Determines the chain length based on the extension probability
+// Returns at least 1, and extends with probability chainExtensionProb up to a maximum length
+func determineChainLength(rng *rand.Rand, chainExtensionProb float64) int {
+	if chainExtensionProb <= 0 {
+		return 1
+	}
+
+	// Calculate maximum chain length as 50 * chainExtensionProb, but at least 1
+	maxLength := max(int(50*chainExtensionProb), 1)
+
+	length := 1
+	for length < maxLength && rng.Float64() < chainExtensionProb {
+		length++
+	}
+
+	return length
 }
 
 // Returns a slice containing all leaf nodes in the graph

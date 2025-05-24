@@ -13,15 +13,17 @@ import (
 )
 
 var (
-	numLeaves    int
-	outputPrefix string
-	seed         int64
+	numLeaves          int
+	outputPrefix       string
+	seed               int64
+	chainExtensionProb float64
 )
 
 func init() {
 	generateCmd.Flags().IntVarP(&numLeaves, "leaves", "l", 4, "Number of leaves in the generated tree")
 	generateCmd.Flags().StringVarP(&outputPrefix, "prefix", "p", "", "Output file prefix (required)")
 	generateCmd.Flags().Int64VarP(&seed, "seed", "s", 0, "Random seed (0 for current time)")
+	generateCmd.Flags().Float64VarP(&chainExtensionProb, "chain-prob", "c", 0, "Probability of extending leaf chains (0 = no chains, 0.1 = 10% chance per extension)")
 	generateCmd.MarkFlagRequired("prefix")
 
 	rootCmd.AddCommand(generateCmd)
@@ -55,7 +57,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Generating random tree with %d leaves...\n", numLeaves)
-		tree, err := algorithms.GenerateRandomTree(numLeaves, seed)
+		tree, err := algorithms.GenerateRandomTree(numLeaves, seed, chainExtensionProb)
 		if err != nil {
 			fmt.Printf("Error generating tree: %v\n", err)
 			return
