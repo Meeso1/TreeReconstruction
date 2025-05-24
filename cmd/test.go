@@ -13,12 +13,13 @@ import (
 )
 
 type TestResult struct {
-	InputFile    string
-	OutputFile   string
-	ExpectedFile string
-	Status       TestStatus
-	Error        string
-	Duration     time.Duration
+	InputFile         string
+	OutputFile        string
+	ExpectedFile      string
+	Status            TestStatus
+	Error             string
+	Duration          time.Duration
+	ComparisonDetails *CompareResult
 }
 
 type TestStatus int
@@ -149,6 +150,7 @@ func runSingleTest(inputFile string) TestResult {
 	} else {
 		result.Status = TestFailed
 		result.Error = "Tree topologies differ"
+		result.ComparisonDetails = &compareResult
 	}
 
 	result.Duration = time.Since(start)
@@ -168,6 +170,16 @@ func printTestResult(result TestResult) {
 		fmt.Printf("✓ [%s] %s (%.2fs)\n", status, inputName, result.Duration.Seconds())
 	case TestFailed:
 		fmt.Printf("✗ [%s] %s (%.2fs) - %s\n", status, inputName, result.Duration.Seconds(), result.Error)
+		if result.ComparisonDetails != nil {
+			fmt.Printf("  Generated output:\n")
+			for _, line := range result.ComparisonDetails.Tree1Summary {
+				fmt.Printf("    %s\n", line)
+			}
+			fmt.Printf("  Expected output:\n")
+			for _, line := range result.ComparisonDetails.Tree2Summary {
+				fmt.Printf("    %s\n", line)
+			}
+		}
 	case TestSkipped:
 		fmt.Printf("- [%s] %s - %s\n", status, inputName, result.Error)
 	case TestError:
