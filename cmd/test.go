@@ -13,14 +13,13 @@ import (
 )
 
 type TestResult struct {
-	InputFile              string
-	OutputFile             string
-	ExpectedFile           string
-	Status                 TestStatus
-	Error                  string
-	Duration               time.Duration
-	ReconstructionDuration time.Duration
-	ComparisonDetails      *CompareResult
+	InputFile         string
+	OutputFile        string
+	ExpectedFile      string
+	Status            TestStatus
+	Error             string
+	Duration          time.Duration
+	ComparisonDetails *CompareResult
 }
 
 type TestStatus int
@@ -49,7 +48,6 @@ func (s TestStatus) String() string {
 
 func init() {
 	rootCmd.AddCommand(testCmd)
-	testCmd.Flags().StringP("save-times-to", "t", "", "Save reconstruction times to specified file")
 }
 
 var testCmd = &cobra.Command{
@@ -84,16 +82,6 @@ var testCmd = &cobra.Command{
 			printTestResult(result)
 		}
 
-		timesFile, _ := cmd.Flags().GetString("save-times-to")
-		if timesFile != "" {
-			err := saveTimesToFile(timesFile, results)
-			if err != nil {
-				fmt.Printf("Warning: Failed to save times to file %s: %v\n", timesFile, err)
-			} else {
-				fmt.Printf("Execution times saved to %s\n", timesFile)
-			}
-		}
-
 		printTestSummary(results)
 	},
 }
@@ -114,28 +102,6 @@ func findInputFiles(directory string) ([]string, error) {
 	})
 
 	return inputFiles, err
-}
-
-func saveTimesToFile(filename string, results []TestResult) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	for _, result := range results {
-		inputName := filepath.Base(result.InputFile)
-		inputName = strings.TrimSuffix(inputName, ".input.txt")
-
-		timeSeconds := result.ReconstructionDuration.Seconds()
-
-		_, err := fmt.Fprintf(file, "%s;%.6f\n", inputName, timeSeconds)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func runSingleTest(inputFile string) TestResult {
@@ -159,14 +125,14 @@ func runSingleTest(inputFile string) TestResult {
 	outputFile := filepath.Join(tmpDir, fmt.Sprintf("test_output_%d.txt", time.Now().UnixNano()))
 	result.OutputFile = outputFile
 
-	reconstructStart := time.Now()
 	reconstructResult := runReconstructCommand(inputFile, outputFile, io.SerializationTypeNeighborLists)
-	result.ReconstructionDuration = time.Since(reconstructStart)
 
 	if reconstructResult.Error != nil {
 		result.Status = TestError
 		result.Error = fmt.Sprintf("Reconstruction failed: %v", reconstructResult.Error)
 		result.Duration = time.Since(start)
+		// Clean up temporary file
+		os.Remove(outputFile)
 		return result
 	}
 
