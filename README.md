@@ -13,20 +13,20 @@ cd treereconstruction
 make build
 
 # Run the application
-./bin/tree-reconstruction
+./bin/treereconstruction
 ```
 
 ## Usage
 
 ```bash
 # Show help
-./bin/tree-reconstruction help
+./bin/treereconstruction help
 
 # Check version
-./bin/tree-reconstruction version
+./bin/treereconstruction version
 
 # Reconstruct a tree from distance matrix in input_file.txt
-./bin/tree-reconstruction reconstruct -i input_file.txt
+./bin/treereconstruction reconstruct -i input_file.txt
 ```
 
 ## Development
